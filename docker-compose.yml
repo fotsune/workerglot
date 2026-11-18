@@ -9,6 +9,9 @@ services:
       # Port configuration
       - PORT=3220
       
+      # Optional: try configured paid providers first, free ones only as fallback
+      # - PREFER_PAID=true
+
       # Optional: Azure AI Translator (uncomment and set if you have keys)
       # - AZURE_TRANSLATOR_KEY=your_azure_key
       # - AZURE_TRANSLATOR_REGION=eastus

@@ -17,13 +17,13 @@ export class LibreTranslateProvider extends TranslationProvider {
   private languagesFetched = false;
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
-    const url = process.env.LIBRETRANSLATE_URL;
+    const url = this.env.LIBRETRANSLATE_URL;
     
     if (!url) {
       throw new Error('LIBRETRANSLATE_URL environment variable not set');
     }
 
-    const apiKey = process.env.LIBRETRANSLATE_API_KEY;
+    const apiKey = this.env.LIBRETRANSLATE_API_KEY;
     const baseUrl = url.endsWith('/') ? url : url + '/';
     
     const params = new URLSearchParams({
@@ -68,7 +68,7 @@ export class LibreTranslateProvider extends TranslationProvider {
   }
 
   isAvailable(): boolean {
-    if (!process.env.LIBRETRANSLATE_URL) {
+    if (!this.env.LIBRETRANSLATE_URL) {
       return false;
     }
 
@@ -101,13 +101,13 @@ export class LibreTranslateProvider extends TranslationProvider {
       return;
     }
     try {
-      const url = process.env.LIBRETRANSLATE_URL;
+      const url = this.env.LIBRETRANSLATE_URL;
       if (!url) {
         return;
       }
 
       const baseUrl = url.endsWith('/') ? url : url + '/';
-      const apiKey = process.env.LIBRETRANSLATE_API_KEY;
+      const apiKey = this.env.LIBRETRANSLATE_API_KEY;
       
       let languagesUrl = `${baseUrl}languages`;
       if (apiKey) {

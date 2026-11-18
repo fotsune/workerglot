@@ -8,18 +8,22 @@
     "type": "git",
     "url": "https://github.com/FxEmbed/polyglot"
   },
-  "module": "index.ts",
+  "module": "worker.ts",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "start": "tsx server.ts",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261118.1",
+    "@types/node": "^26.6.6",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.0.0"
   },
   "dependencies": {
-    "@vitalets/google-translate-api": "^9.2.1",
-    "bing-translate-api": "^4.1.0",
-    "deeplx": "^0.3.2"
+    "tsx": "^4.23.15"
   }
 }

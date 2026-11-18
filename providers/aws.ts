@@ -108,9 +108,9 @@ export class AWSProvider extends TranslationProvider {
   }
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
-    const accessKey = process.env.AWS_ACCESS_KEY_ID;
-    const secretKey = process.env.AWS_SECRET_ACCESS_KEY;
-    const region = process.env.AWS_REGION || 'us-east-1';
+    const accessKey = this.env.AWS_ACCESS_KEY_ID;
+    const secretKey = this.env.AWS_SECRET_ACCESS_KEY;
+    const region = this.env.AWS_REGION || 'us-east-1';
 
     if (!accessKey || !secretKey) {
       throw new Error('AWS credentials not configured');
@@ -176,7 +176,7 @@ export class AWSProvider extends TranslationProvider {
   }
 
   isAvailable(): boolean {
-    return !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+    return !!(this.env.AWS_ACCESS_KEY_ID && this.env.AWS_SECRET_ACCESS_KEY);
   }
 
   isFree(): boolean {

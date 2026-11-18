@@ -1,22 +1,26 @@
-import { SUPPORTED_LANGUAGES } from 'deeplx';
 import { TranslationProvider } from '../types.js';
 import type { TranslationResponse } from '../types.js';
+
+// Same language set as @deeplx/core's SUPPORTED_LANGUAGES
+const SUPPORTED_LANGUAGES = [
+  'AR', 'BG', 'CS', 'DA', 'DE', 'EL', 'EN', 'EN-GB', 'EN-US', 'ES', 'ES-419', 'ET', 'FI', 'FR', 'HE', 'HU',
+  'ID', 'IT', 'JA', 'KO', 'LT', 'LV', 'NB', 'NL', 'PL', 'PT', 'PT-BR', 'PT-PT', 'RO', 'RU', 'SK', 'SL', 'SV',
+  'TR', 'UK', 'VI', 'ZH', 'ZH-HANS', 'ZH-HANT',
+];
 
 export class DeepLXCloudflareProvider extends TranslationProvider {
   name = 'deeplx-cloudflare';
 
-  // Dynamic language support from DeepLX package
-  private supportedLanguages = new Set(
-    SUPPORTED_LANGUAGES.map(lang => lang.code.toLowerCase())
-  );
+  private supportedLanguages = new Set(SUPPORTED_LANGUAGES.map(code => code.toLowerCase()));
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
-    const url = process.env.DEEPLX_CLOUDFLARE_URL;
+    const url = this.env.DEEPLX_CLOUDFLARE_URL;
     if (!url) {
       throw new Error('DEEPLX_CLOUDFLARE_URL is not set');
     }
-    const response = await fetch(`${url}/translate`, {
+    const response = await fetch(`${url.replace(/\/+$/, '')}/translate`, {
       method: 'POST',
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ 
         text,
         target_lang: targetLang,
@@ -40,7 +44,7 @@ export class DeepLXCloudflareProvider extends TranslationProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.DEEPLX_CLOUDFLARE_URL;
+    return !!this.env.DEEPLX_CLOUDFLARE_URL;
   }
 
   isFree(): boolean {
@@ -52,7 +56,7 @@ export class DeepLXCloudflareProvider extends TranslationProvider {
   }
 
   // No known constraints on text type
-  supportsText(text: string): boolean {
+  supportsText(_text: string): boolean {
     return true;
   }
-} 
+}

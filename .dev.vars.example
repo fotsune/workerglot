@@ -1,0 +1,27 @@
+# Copy to .dev.vars for local `wrangler dev`. Never commit real keys.
+
+# Protect /translate with `Authorization: Bearer <token>`
+# ACCESS_TOKEN=""
+
+# Optional hard cap on input length in characters (413 above it)
+# MAX_TEXT_LENGTH="5000"
+
+# Per-provider timeout in milliseconds
+# REQUEST_TIMEOUT_MS="15000"
+
+# Try configured paid providers first, free ones only as fallback
+# PREFER_PAID="true"
+
+# Self-hosted DeepLX servers
+# DEEPLX_CLOUDFLARE_URL="https://deeplx.example.workers.dev"
+# DEEPLX_VERCEL_URL="https://deeplx.example.vercel.app"
+
+# Paid / official APIs
+# DEEPL_API_KEY=""
+# AZURE_TRANSLATOR_KEY=""
+# AZURE_TRANSLATOR_REGION=""
+# AWS_ACCESS_KEY_ID=""
+# AWS_SECRET_ACCESS_KEY=""
+# AWS_REGION=""
+# LIBRETRANSLATE_URL=""
+# LIBRETRANSLATE_API_KEY=""

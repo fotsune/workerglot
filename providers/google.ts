@@ -1,7 +1,13 @@
-import { translate as googleTranslate } from '@vitalets/google-translate-api';
 import { TranslationProvider } from './types.js';
 import type { TranslationResponse } from './types.js';
-import type { TranslateOptions } from '@vitalets/google-translate-api/dist/cjs/types.js';
+
+// Endpoint and body shape mirror @vitalets/google-translate-api, but with plain
+// fetch so the provider also runs inside a Cloudflare Worker.
+const GOOGLE_ENDPOINT = 'https://translate.google.com/translate_a/single?client=at&dt=t&dt=rm&dj=1';
+
+interface GoogleSingleResponse {
+  sentences?: Array<{ trans?: string }>;
+}
 
 export class GoogleTranslateProvider extends TranslationProvider {
   name = 'google';
@@ -22,14 +28,38 @@ export class GoogleTranslateProvider extends TranslationProvider {
   ]);
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
-    const options: TranslateOptions = { to: targetLang };
-    if (sourceLang) {
-      options.from = sourceLang;
+    const body = new URLSearchParams({
+      sl: sourceLang || 'auto',
+      tl: targetLang,
+      q: text,
+    });
+
+    const response = await fetch(GOOGLE_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+      },
+      body: body.toString(),
+    });
+
+    if (!response.ok) {
+      // Google often answers 429 with a long "unusual traffic" HTML page: keep the log readable.
+      const detail = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 200);
+      throw new Error(`Google Translate error (${response.status}): ${detail}`);
     }
-    
-    const result = await googleTranslate(text, options);
+
+    const data = await response.json() as GoogleSingleResponse;
+    const translated = (data.sentences || [])
+      .filter(sentence => typeof sentence.trans === 'string')
+      .map(sentence => sentence.trans)
+      .join('');
+
+    if (!translated) {
+      throw new Error('Invalid response from Google Translate');
+    }
+
     return {
-      translated_text: result.text,
+      translated_text: translated,
       source_lang: sourceLang,
       target_lang: targetLang,
       provider: 'google'
@@ -54,7 +84,7 @@ export class GoogleTranslateProvider extends TranslationProvider {
   }
 
   // No known constraints on text type
-  supportsText(text: string): boolean {
+  supportsText(_text: string): boolean {
     return true;
   }
-} 
+}

@@ -1,22 +1,37 @@
-import { TranslationProvider, GoogleTranslateProvider, DeepLXProvider, DeepLXCloudflareProvider, BingTranslateProvider, AzureProvider, DeepLProvider, DeepLXVercelProvider, AWSProvider, LibreTranslateProvider } from './providers/index.js';
-import type { TranslationResponse } from './providers/index.js';
+import { GoogleTranslateProvider, DeepLXProvider, DeepLXCloudflareProvider, BingTranslateProvider, AzureProvider, DeepLProvider, DeepLXVercelProvider, AWSProvider, LibreTranslateProvider } from './providers/index.js';
+import type { TranslationProvider, TranslationResponse } from './providers/index.js';
+import type { Env } from './config.js';
+
+const DEFAULT_TIMEOUT_MS = 15000;
 
 export class TranslationService {
-  private allProviders: TranslationProvider[] = [
-    new GoogleTranslateProvider(),
-    new DeepLXProvider(),
-    new DeepLXCloudflareProvider(),
-    new DeepLXVercelProvider(),
-    new BingTranslateProvider(),
-    new AzureProvider(),
-    new DeepLProvider(),
-    new AWSProvider(),
-    new LibreTranslateProvider(),
-  ];
+  private allProviders: TranslationProvider[];
 
   private availableProviders: TranslationProvider[];
 
-  constructor() {
+  private timeoutMs: number;
+
+  // PREFER_PAID=true puts configured paid providers ahead of the free ones.
+  private preferPaid: boolean;
+
+  constructor(env: Env = {}) {
+    this.allProviders = [
+      new GoogleTranslateProvider(env),
+      new DeepLXProvider(env),
+      new DeepLXCloudflareProvider(env),
+      new DeepLXVercelProvider(env),
+      new BingTranslateProvider(env),
+      new AzureProvider(env),
+      new DeepLProvider(env),
+      new AWSProvider(env),
+      new LibreTranslateProvider(env),
+    ];
+
+    this.timeoutMs = env.REQUEST_TIMEOUT_MS ? Number(env.REQUEST_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
+
+    const preferPaidRaw = (env.PREFER_PAID ?? '').trim().toLowerCase();
+    this.preferPaid = ['1', 'true', 'yes', 'on'].includes(preferPaidRaw);
+
     // Only include providers that are available (have required configuration)
     this.availableProviders = this.allProviders.filter(provider => {
       const isAvailable = provider.isAvailable();
@@ -57,25 +72,21 @@ export class TranslationService {
 
   private selectProvider(targetLang: string, text: string): TranslationProvider | null {
     const { free, paid } = this.getProvidersForLanguage(targetLang, text);
-    
-    // Prefer free providers first
-    if (free.length > 0) {
-      const randomIndex = Math.floor(Math.random() * free.length);
-      console.log(`Selected free provider: ${free[randomIndex]?.name} (${free.length} free providers available)`);
-      return free[randomIndex] || null;
+    const groups: Array<[string, TranslationProvider[]]> = this.preferPaid
+      ? [['paid', paid], ['free', free]]
+      : [['free', free], ['paid', paid]];
+
+    for (const [kind, group] of groups) {
+      if (group.length === 0) continue;
+      const randomIndex = Math.floor(Math.random() * group.length);
+      console.log(`Selected ${kind} provider: ${group[randomIndex]?.name} (${group.length} ${kind} providers available, preferPaid=${this.preferPaid})`);
+      return group[randomIndex] || null;
     }
-    
-    // Fall back to paid providers if no free ones available
-    if (paid.length > 0) {
-      const randomIndex = Math.floor(Math.random() * paid.length);
-      console.log(`No free providers available, using paid provider: ${paid[randomIndex]?.name} (${paid.length} paid providers available)`);
-      return paid[randomIndex] || null;
-    }
-    
+
     return null;
   }
 
-  // Get other providers for fallback, prioritizing free over paid
+  // Get other providers for fallback, in the same order the primary one was picked
   private getOtherProviders(excludeProvider: TranslationProvider, targetLang: string, text: string): TranslationProvider[] {
     const { free, paid } = this.getProvidersForLanguage(targetLang, text);
     
@@ -83,8 +94,27 @@ export class TranslationService {
     const availableFree = free.filter(provider => provider !== excludeProvider);
     const availablePaid = paid.filter(provider => provider !== excludeProvider);
     
-    // Return free providers first, then paid providers
-    return [...availableFree, ...availablePaid];
+    // PREFER_PAID keeps the paid providers ahead in the fallback chain too
+    return this.preferPaid
+      ? [...availablePaid, ...availableFree]
+      : [...availableFree, ...availablePaid];
+  }
+
+  // Workers kill an over-long request on the platform side, so each attempt gets a deadline.
+  private withTimeout<T>(promise: Promise<T>, providerName: string): Promise<T> {
+    if (!Number.isFinite(this.timeoutMs) || this.timeoutMs <= 0) {
+      return promise;
+    }
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(`${providerName} timed out after ${this.timeoutMs}ms`)),
+        this.timeoutMs
+      );
+      promise.then(
+        value => { clearTimeout(timer); resolve(value); },
+        error => { clearTimeout(timer); reject(error); }
+      );
+    });
   }
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
@@ -100,7 +130,7 @@ export class TranslationService {
     // Try primary provider
     try {
       console.log(`Attempting translation with ${primaryProvider.name} for language ${targetLang}`);
-      return await primaryProvider.translate(text, targetLang, sourceLang);
+      return await this.withTimeout(primaryProvider.translate(text, targetLang, sourceLang), primaryProvider.name);
     } catch (error) {
       console.error(`${primaryProvider.name} failed:`, error);
 
@@ -108,7 +138,7 @@ export class TranslationService {
       for (const provider of fallbackProviders) {
         try {
           console.log(`Falling back to ${provider.name} for language ${targetLang}`);
-          return await provider.translate(text, targetLang, sourceLang);
+          return await this.withTimeout(provider.translate(text, targetLang, sourceLang), provider.name);
         } catch (fallbackError) {
           console.error(`${provider.name} fallback failed:`, fallbackError);
         }
@@ -118,4 +148,7 @@ export class TranslationService {
       throw new Error('All translation providers failed');
     }
   }
-} 
+}
+
+/** One service per bindings object; the Worker calls this once per request. */
+export const createTranslationService = (env: Env) => new TranslationService(env);

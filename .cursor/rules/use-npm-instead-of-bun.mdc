@@ -1,0 +1,19 @@
+---
+description: Use Node.js and npm instead of Bun, pnpm, or yarn.
+globs: "*.ts, *.tsx, *.js, package.json"
+alwaysApply: false
+---
+
+Default to Node.js and npm. This project has no Bun dependency.
+
+- Use `npm install` instead of `bun install`
+- Use `npm run <script>` instead of `bun run <script>`
+- Use `npx <bin>` instead of `bunx <bin>`
+- Use `node <file>` / `tsx <file>` instead of `bun <file>`
+- Node has no automatic `.env` loading: `server.ts` calls `process.loadEnvFile('.env')` when the file exists
+
+## Entry points
+
+- `worker.ts` - Cloudflare Workers handler, the shared implementation of every route
+- `server.ts` - thin `node:http` adapter that serves `worker.ts`'s `fetch` handler on Node (`npm start`)
+- `providers/` and `translation.ts` - runtime-agnostic, `fetch`/`crypto.subtle` only

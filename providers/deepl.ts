@@ -19,16 +19,18 @@ export class DeepLProvider extends TranslationProvider {
   ]);
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
-    const apiKey = process.env.DEEPL_API_KEY;
+    const apiKey = this.env.DEEPL_API_KEY;
     
     if (!apiKey) {
       throw new Error('DeepL API key not configured');
     }
 
-    const baseUrl = 'https://api-free.deepl.com/v2/translate';
+    // Free-tier keys end in ":fx"; everything else goes to the pro host.
+    const baseUrl = apiKey.endsWith(':fx')
+      ? 'https://api-free.deepl.com/v2/translate'
+      : 'https://api.deepl.com/v2/translate';
 
     const params = new URLSearchParams({
-      auth_key: apiKey,
       text,
       target_lang: targetLang.toUpperCase(),
     });
@@ -41,6 +43,8 @@ export class DeepLProvider extends TranslationProvider {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        // DeepL reads the key only from this header; the legacy `auth_key` body field is rejected.
+        Authorization: `DeepL-Auth-Key ${apiKey}`,
       },
       body: params
     });
@@ -75,7 +79,7 @@ export class DeepLProvider extends TranslationProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.DEEPL_API_KEY;
+    return !!this.env.DEEPL_API_KEY;
   }
 
   isFree(): boolean {

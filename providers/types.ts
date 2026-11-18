@@ -1,3 +1,5 @@
+import type { Env } from '../config.js';
+
 export interface TranslationRequest {
   text: string;
   source_lang?: string;
@@ -13,21 +15,24 @@ export interface TranslationResponse {
 
 // Abstract translation provider interface
 export abstract class TranslationProvider {
+  /** Bindings this provider was constructed with (Worker vars or process.env). */
+  constructor(protected readonly env: Env = {}) {}
+
   abstract name: string;
   abstract translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse>;
-  
+
   // Check if provider supports a specific language
   abstract supportsLanguage(languageCode: string): boolean;
-  
+
   // Check if provider is available (has required configuration)
   abstract isAvailable(): boolean;
-  
+
   // Check if provider is free (true) or paid (false)
   abstract isFree(): boolean;
-  
+
   // Get maximum text length this provider can handle (in characters)
   abstract getMaxTextLength(): number;
 
   // Check if provider supports a specific text
   abstract supportsText(text: string): boolean;
-} 
+}

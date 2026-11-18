@@ -30,9 +30,9 @@ export class AzureProvider extends TranslationProvider {
   ]);
 
   async translate(text: string, targetLang: string, sourceLang?: string): Promise<TranslationResponse> {
-    const apiKey = process.env.AZURE_TRANSLATOR_KEY;
-    const region = process.env.AZURE_TRANSLATOR_REGION || 'global';
-    const endpoint = process.env.AZURE_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com';
+    const apiKey = this.env.AZURE_TRANSLATOR_KEY;
+    const region = this.env.AZURE_TRANSLATOR_REGION || 'global';
+    const endpoint = this.env.AZURE_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com';
 
     if (!apiKey) {
       throw new Error('Azure Translator API key not configured');
@@ -81,7 +81,7 @@ export class AzureProvider extends TranslationProvider {
   }
 
   isAvailable(): boolean {
-    return !!process.env.AZURE_TRANSLATOR_KEY;
+    return !!this.env.AZURE_TRANSLATOR_KEY;
   }
 
   isFree(): boolean {

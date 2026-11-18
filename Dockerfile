@@ -1,14 +1,14 @@
-# Use the official Bun image
-FROM oven/bun:slim
+# Use the official Node.js image
+FROM node:24-slim
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY package.json bun.lock* ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile --production
+RUN npm ci --omit=dev
 
 # Copy source code
 COPY . .
@@ -18,7 +18,7 @@ EXPOSE 3220
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD bun --version > /dev/null || exit 1
+  CMD node -e "fetch('http://localhost:3220/ping').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Start the application
-CMD ["bun", "index.ts"]
+CMD ["npm", "start"]
